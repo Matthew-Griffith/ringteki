@@ -72,7 +72,7 @@ describe('Unveiled Destiny', function() {
                 expect(this.shrineMaiden.fate).toBe(0);
             });
 
-            it('should allow defend the wall to resolve the attackers role element.', function() {
+            it('should allow display of power to resolve the attackers role element.', function() {
                 this.player2.pass();
                 this.player1.clickCard('assassination');
                 this.player1.clickCard('shinjo-outrider', 'any', 'opponent');
@@ -85,6 +85,17 @@ describe('Unveiled Destiny', function() {
                 expect(this.player2).toHavePrompt('Void Ring');
                 this.player2.clickCard(this.shrineMaiden);
                 expect(this.shrineMaiden.fate).toBe(0);
+            });
+
+            it('should let you use the ring effect even if the opponent has claimed the ring', function() {
+                this.player2.claimRing('void');
+                this.noMoreActions();
+                expect(this.player1).toHavePrompt('Resolve Ring Effect');
+                this.player1.clickRing('void');
+                expect(this.player1).toHavePrompt('Void Ring');
+                this.player1.clickCard(this.shrineMaiden);
+                expect(this.shrineMaiden.fate).toBe(0);
+                expect(this.player1).toHavePrompt('Action Window');
             });
         });
     });
