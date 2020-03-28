@@ -66,6 +66,7 @@ class Player extends GameObject {
 
         this.clock = ClockSelector.for(this, clockdetails);
 
+        this.limitedPlayed = 0;
         this.deck = {};
         this.costReducers = [];
         this.playableLocations = [
@@ -73,7 +74,8 @@ class Player extends GameObject {
             new PlayableLocation(PlayTypes.PlayFromProvince, this, Locations.ProvinceOne),
             new PlayableLocation(PlayTypes.PlayFromProvince, this, Locations.ProvinceTwo),
             new PlayableLocation(PlayTypes.PlayFromProvince, this, Locations.ProvinceThree),
-            new PlayableLocation(PlayTypes.PlayFromProvince, this, Locations.ProvinceFour)
+            new PlayableLocation(PlayTypes.PlayFromProvince, this, Locations.ProvinceFour),
+            new PlayableLocation(PlayTypes.PlayFromProvince, this, Locations.StrongholdProvince)
         ];
         this.abilityMaxByIdentifier = {}; // This records max limits for abilities
         this.promptedActionWindows = user.promptedActionWindows || { // these flags represent phase settings
@@ -216,6 +218,19 @@ class Player extends GameObject {
         return cardsToReturn;
     }
 
+    /**
+     * Returns if a card is in play (characters, attachments, provinces, holdings) that has the passed trait
+     * @param {string} trait
+     * @returns {boolean} true/false if the trait is in pay
+     */
+    isTraitInPlay(trait) {
+        return this.game.allCards.some(card => {
+            return card.controller === this && card.hasTrait(trait) && !card.facedown &&
+            (card.location === Locations.PlayArea || (card.isProvince && !card.isBroken) || (card.isInProvince() && card.type === CardTypes.Holding));
+        });
+    }
+
+
     areLocationsAdjacent(location1, location2) {
         let index1 = provinceLocations.indexOf(location1);
         let index2 = provinceLocations.indexOf(location2);
@@ -237,7 +252,11 @@ class Player extends GameObject {
      */
     getDynastyCardsInProvince(location) {
         let province = this.getSourceList(location);
-        return province.filter(card => card.isDynasty);
+        let cards = province.filter(card => card.isDynasty);
+        if(!Array.isArray(cards)) {
+            cards = [cards];
+        }
+        return cards;
     }
 
     /**
@@ -436,18 +455,62 @@ class Player extends GameObject {
      * @param {String} location - one of 'province 1', 'province 2', 'province 3', 'province 4'
      */
     replaceDynastyCard(location) {
-        if(this.getSourceList(location).size() > 1) {
+        let province = this.getProvinceCardInProvince(location);
+
+        if(!province || this.getSourceList(location).size() > 1) {
             return false;
         }
         if(this.dynastyDeck.size() === 0) {
             this.deckRanOutOfCards('dynasty');
             this.game.queueSimpleStep(() => this.replaceDynastyCard(location));
         } else {
-            this.moveCard(this.dynastyDeck.first(), location);
+            let refillAmount = 1;
+            if(province) {
+                let amount = province.mostRecentEffect(EffectNames.RefillProvinceTo);
+                if(amount) {
+                    refillAmount = amount;
+                }
+            }
+
+            this.refillProvince(location, refillAmount);
         }
         return true;
     }
 
+    triggerRally(location) {
+        if(this.dynastyDeck.size() === 0) {
+            this.deckRanOutOfCards('dynasty');
+            this.game.queueSimpleStep(() => this.triggerRally(location));
+        } else {
+            let cardFromDeck = this.dynastyDeck.first();
+            this.moveCard(cardFromDeck, location);
+            cardFromDeck.facedown = false;
+            return true;
+        }
+        return true;
+    }
+
+    refillProvince(location, refillAmount) {
+        if(refillAmount <= 0) {
+            return true;
+        }
+
+        if(this.dynastyDeck.size() === 0) {
+            this.deckRanOutOfCards('dynasty');
+            this.game.queueSimpleStep(() => this.refillProvince(location, refillAmount));
+            return true;
+        }
+        let province = this.getProvinceCardInProvince(location);
+        let refillFunc = province.mostRecentEffect(EffectNames.CustomProvinceRefillEffect);
+        if(refillFunc) {
+            refillFunc(this, province);
+        } else {
+            this.moveCard(this.dynastyDeck.first(), location);
+        }
+
+        this.game.queueSimpleStep(() => this.refillProvince(location, refillAmount - 1));
+        return true;
+    }
     /**
      * Shuffles the conflict deck, emitting an event and displaying a message in chat
      */
@@ -540,7 +603,6 @@ class Player extends GameObject {
         this.fate = 0;
         this.honor = 0;
         this.readyToStart = false;
-        this.limitedPlayed = 0;
         this.maxLimited = 1;
         this.firstPlayer = false;
     }
@@ -740,7 +802,6 @@ class Player extends GameObject {
         });
 
         this.passedDynasty = false;
-        this.limitedPlayed = 0;
         this.conflictOpportunities.military = 1;
         this.conflictOpportunities.political = 1;
         this.conflictOpportunities.total = 2;
@@ -917,7 +978,7 @@ class Player extends GameObject {
             holding: dynastyCardLocations,
             conflictCharacter: [...conflictCardLocations, Locations.PlayArea],
             dynastyCharacter: [...dynastyCardLocations, Locations.PlayArea],
-            event: [...conflictCardLocations, Locations.BeingPlayed],
+            event: _.uniq([...conflictCardLocations, ...dynastyCardLocations, Locations.BeingPlayed]),
             attachment: [...conflictCardLocations, Locations.PlayArea]
         };
 

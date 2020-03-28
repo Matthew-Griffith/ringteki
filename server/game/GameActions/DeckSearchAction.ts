@@ -10,6 +10,7 @@ export interface DeckSearchProperties extends PlayerActionProperties {
     amount?: number;
     numCards?: number;
     reveal?: boolean;
+    faceup?: boolean;
     destination?: Locations;
     deck?: Decks;
     shuffle?: Boolean;
@@ -30,6 +31,7 @@ export class DeckSearchAction extends PlayerAction {
         deck: Decks.ConflictDeck,
         selectedCardsHandler: null,
         shuffle: true,
+        faceup: false,
         reveal: true
     };
 
@@ -161,10 +163,10 @@ export class DeckSearchAction extends PlayerAction {
             if (properties.reveal) {
                 switch(properties.destination) {
                     case Locations.Hand:
-                        context.game.addMessage('{0} takes {1} and adds {2} to their hand', event.player, selectedCards.map(e => e.name).join(', '), selectedCards.length > 1 ? 'them' : 'it');
+                        context.game.addMessage('{0} takes {1} and adds {2} to their hand', event.player, selectedCards, selectedCards.length > 1 ? 'them' : 'it');
                         break;
                     default:
-                        context.game.addMessage('{0} selects {1} and moves {2} to {3}', event.player, selectedCards.map(e => e.name).join(', '), selectedCards.length > 1 ? 'them' : 'it', properties.destination);
+                        context.game.addMessage('{0} selects {1} and moves {2} to {3}', event.player, selectedCards, selectedCards.length > 1 ? 'them' : 'it', properties.destination);
                         break;
                 }
             }
@@ -174,13 +176,16 @@ export class DeckSearchAction extends PlayerAction {
                         context.game.addMessage('{0} takes {1} into their hand', event.player, selectedCards.length > 1 ? 'cards' : 'a card');
                         break;
                     default:
-                        context.game.addMessage('{0} makes a selection and moves {2} to {3}', event.player, selectedCards.map(e => e.name).join(', '), selectedCards.length > 1 ? 'them' : 'it', properties.destination);
+                        context.game.addMessage('{0} makes a selection and moves {2} to {3}', event.player, selectedCards, selectedCards.length > 1 ? 'them' : 'it', properties.destination);
                         break;
                 }
             }
 
             selectedCards.forEach(card  => {
                 event.player.moveCard(card, properties.destination);
+                if(properties.faceup) {
+                    card.facedown = false;
+                }
             });            
         }
         else

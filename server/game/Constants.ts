@@ -19,6 +19,11 @@ export enum Locations {
     Role = 'role'
 };
 
+export enum CharacterStatus {
+    Honored = 'honored',
+    Dishonored = 'dishonored'
+}
+
 export enum Decks {
     ConflictDeck = 'conflict deck',
     DynastyDeck = 'dynasty deck'
@@ -52,9 +57,11 @@ export enum EffectNames {
     ChangeType = 'changeType',
     CopyCharacter = 'copyCharacter',
     CustomEffect = 'customEffect',
+    CustomProvinceRefillEffect = 'customProvinceRefillEffect',
     DelayedEffect = 'delayedEffect',
     DoesNotBow = 'doesNotBow',
     DoesNotReady = 'doesNotReady',
+    EntersPlayWithStatus = "entersPlayWithStatus",
     EntersPlayForOpponent = 'entersPlayForOpponent',
     FateCostToAttack = 'fateCostToAttack',
     FateCostToTarget = 'fateCostToTarget',
@@ -115,6 +122,7 @@ export enum EffectNames {
     CannotDeclareConflictsOfType = 'cannotDeclareConflictsOfType',
     CanPlayFromOwn = 'canPlayFromOwn',
     CanPlayFromOpponents = 'canPlayFromOpponents',
+    CannotResolveRings = "cannotResolveRings",
     ChangePlayerGloryModifier = 'gloryModifier',
     ChangePlayerSkillModifier = 'conflictSkillModifier',
     GainActionPhasePriority = 'actionPhasePriority',
@@ -132,6 +140,10 @@ export enum EffectNames {
     EventsCannotBeCancelled = 'eventsCannotBeCancelled',
     ForceConflictUnopposed = 'forceConflictUnopposed',
     MustDeclareMaximumAttackers = 'mustDeclareMaximumAttackers',
+    RefillProvinceTo = 'refillProvinceTo',
+    RestartDynastyPhase = 'restartDynastyPhase',
+    StrongholdCanBeAttacked = 'strongholdCanBeAttacked',
+    DefendersChosenFirstDuringConflict = 'defendersChosenFirstDuringConflict'
 };
 
 export enum Durations {
@@ -175,6 +187,7 @@ export enum TargetModes {
 };
 
 export enum Phases {
+    Setup = 'setup',
     Dynasty = 'dynasty',
     Draw = 'draw',
     Conflict = 'conflict',
@@ -208,12 +221,14 @@ export enum EventNames {
     OnConflictInitiated = 'onConflictInitiated',
     OnDuelInitiated = 'onDuelInitiated',
     OnConflictDeclared = 'onConflictDeclared',
+    OnConflictOpportunityAvailable = 'onConflictOpportunityAvailable',
     OnCovertResolved = 'onCovertResolved',
     OnCardRevealed = 'onCardRevealed',
     OnCardTurnedFacedown = 'onCardTurnedFacedown',
     OnDefendersDeclared = 'onDefendersDeclared',
     AfterConflict = 'afterConflict',
     OnBreakProvince = 'onBreakProvince',
+    OnRestoreProvince = 'onRestoreProvince',
     OnResolveConflictRing = 'onResolveConflictRing',
     OnResolveRingElement = 'onResolveRingElement',
     OnClaimRing = 'onClaimRing',
@@ -273,6 +288,8 @@ export enum EventNames {
     OnGloryCount = 'onGloryCount',
     OnClaimFavor = 'onClaimFavor',
     OnConflictMoved = 'onConflictMoved',
+    OnConflictDeclaredBeforeProvinceReveal = 'onConflictDeclaredBeforeProvinceReveal',
+    OnTheCrashingWave = 'onTheCrashingWave',
     Unnamed = 'unnamedEvent'
 };
 

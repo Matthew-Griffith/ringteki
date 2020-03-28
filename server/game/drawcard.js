@@ -5,6 +5,7 @@ const DuplicateUniqueAction = require('./duplicateuniqueaction.js');
 const CourtesyAbility = require('./KeywordAbilities/CourtesyAbility');
 const PrideAbility = require('./KeywordAbilities/PrideAbility');
 const SincerityAbility = require('./KeywordAbilities/SincerityAbility');
+const RallyAbility = require('./KeywordAbilities/RallyAbility');
 const StatusToken = require('./StatusToken');
 const StatModifier = require('./StatModifier');
 
@@ -37,8 +38,6 @@ class DrawCard extends BaseCard {
         this.isDynasty = cardData.side === 'dynasty';
         this.personalHonor = null;
 
-        this.parseKeywords(cardData.text ? cardData.text.replace(/<[^>]*>/g, '').toLowerCase() : '');
-
         this.menu = _([
             { command: 'bow', text: 'Bow/Ready' },
             { command: 'honor', text: 'Honor' },
@@ -54,6 +53,9 @@ class DrawCard extends BaseCard {
             this.abilities.reactions.push(new PrideAbility(this.game, this));
             this.abilities.reactions.push(new SincerityAbility(this.game, this));
         }
+        if(this.isDynasty) {
+            this.abilities.reactions.push(new RallyAbility(this.game, this));
+        }
     }
 
     getPrintedSkill(type) {
@@ -64,16 +66,6 @@ class DrawCard extends BaseCard {
             return this.cardData.political === null || this.cardData.political === undefined ?
                 NaN : isNaN(parseInt(this.cardData.political)) ? 0 : parseInt(this.cardData.political);
         }
-    }
-
-    hasKeyword(keyword) {
-        let addKeywordEffects = this.getEffects(EffectNames.AddKeyword).filter(effectValue => effectValue === keyword.toLowerCase());
-        let loseKeywordEffects = this.getEffects(EffectNames.LoseKeyword).filter(effectValue => effectValue === keyword.toLowerCase());
-        return addKeywordEffects.length > loseKeywordEffects.length;
-    }
-
-    hasPrintedKeyword(keyword) {
-        return this.printedKeywords.includes(keyword.toLowerCase());
     }
 
     isLimited() {
@@ -102,6 +94,11 @@ class DrawCard extends BaseCard {
 
     hasCourtesy() {
         return this.hasKeyword('courtesy');
+    }
+
+    hasRally() {
+        //Facedown cards are out of play and their keywords don't update until after the reveal reaction window is done, so we need to check for the printed keyword
+        return this.hasKeyword('rally') || (!this.isBlank() && this.hasPrintedKeyword('rally'));
     }
 
     getCost() {
@@ -727,8 +724,11 @@ class DrawCard extends BaseCard {
         return !this.isCovert() && this.checkRestrictions('applyCovert', context);
     }
 
-    canDeclareAsAttacker(conflictType, ring, province) { // eslint-disable-line no-unused-vars
-        const attackers = this.game.isDuringConflict() ? this.game.currentConflict.attackers : [];
+    canDeclareAsAttacker(conflictType, ring, province, incomingAttackers = undefined) { // eslint-disable-line no-unused-vars
+        let attackers = this.game.isDuringConflict() ? this.game.currentConflict.attackers : [];
+        if(incomingAttackers) {
+            attackers = incomingAttackers;
+        }
         if(attackers.concat(this).reduce((total, card) => total + card.sumEffects(EffectNames.FateCostToAttack), 0) > this.controller.fate) {
             return false;
         }
@@ -760,7 +760,9 @@ class DrawCard extends BaseCard {
 
     canParticipateAsDefender(conflictType = this.game.currentConflict.conflictType) {
         let effects = this.getEffects(EffectNames.CannotParticipateAsDefender);
-        return !effects.some(value => value === 'both' || value === conflictType) && !this.hasDash(conflictType);
+        let hasDash = conflictType ? this.hasDash(conflictType) : false;
+
+        return !effects.some(value => value === 'both' || value === conflictType) && !hasDash;
     }
 
     bowsOnReturnHome() {

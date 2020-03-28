@@ -27,7 +27,9 @@ const ValidKeywords = [
     'sincerity',
     'courtesy',
     'pride',
-    'covert'
+    'covert',
+    'rally',
+    'eminent'
 ];
 
 class BaseCard extends EffectSource {
@@ -71,6 +73,7 @@ class BaseCard extends EffectSource {
         this.childCards = [];
 
         this.setupCardAbilities(AbilityDsl);
+        this.parseKeywords(cardData.text ? cardData.text.replace(/<[^>]*>/g, '').toLowerCase() : '');
         this.applyAttachmentBonus();
     }
 
@@ -233,6 +236,16 @@ class BaseCard extends EffectSource {
         this.persistentEffect(Object.assign({ condition: context => context.player.hasComposure() }, properties));
     }
 
+    hasKeyword(keyword) {
+        let addKeywordEffects = this.getEffects(EffectNames.AddKeyword).filter(effectValue => effectValue === keyword.toLowerCase());
+        let loseKeywordEffects = this.getEffects(EffectNames.LoseKeyword).filter(effectValue => effectValue === keyword.toLowerCase());
+        return addKeywordEffects.length > loseKeywordEffects.length;
+    }
+
+    hasPrintedKeyword(keyword) {
+        return this.printedKeywords.includes(keyword.toLowerCase());
+    }
+
     hasTrait(trait: string): boolean {
         trait = trait.toLowerCase();
         return this.getTraits().includes(trait) || this.getEffects(EffectNames.AddTrait).includes(trait);
@@ -245,11 +258,14 @@ class BaseCard extends EffectSource {
     }
 
     isFaction(faction: string): boolean {
+        let copyEffect = this.mostRecentEffect(EffectNames.CopyCharacter);
+        let cardFaction = copyEffect ? copyEffect.printedFaction : this.printedFaction;
+
         faction = faction.toLowerCase();
         if(faction === 'neutral') {
-            return this.printedFaction === faction && !this.anyEffect(EffectNames.AddFaction);
+            return cardFaction === faction && !this.anyEffect(EffectNames.AddFaction);
         }
-        return this.printedFaction === faction || this.getEffects(EffectNames.AddFaction).includes(faction);
+        return cardFaction === faction || this.getEffects(EffectNames.AddFaction).includes(faction);
     }
 
     isInProvince(): boolean {
@@ -439,6 +455,11 @@ class BaseCard extends EffectSource {
         return !!this.tokens[type];
     }
 
+    removeAllTokens(): void {
+        let keys = Object.keys(this.tokens);
+        keys.forEach(key => this.removeToken(key, this.tokens[key]));
+    }
+
     removeToken(type: string, number: number): void {
         this.tokens[type] -= number;
 
@@ -548,7 +569,6 @@ class BaseCard extends EffectSource {
             this.game.promptForSelect(this.controller, {
                 activePromptTitle: 'Choose an attachment to discard',
                 waitingPromptTitle: 'Waiting for opponent to choose an attachment to discard',
-                controller: Players.Self,
                 cardCondition: card => card.parent === this && card.isRestricted(),
                 onSelect: (player, card) => {
                     this.game.addMessage('{0} discards {1} from {2} due to too many Restricted attachments', player, card, card.parent);
